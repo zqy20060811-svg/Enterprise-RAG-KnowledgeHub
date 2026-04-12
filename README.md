@@ -11,8 +11,8 @@
 ## 启动
 1. 安装依赖：pip install -r requirements.txt
 2. 启动后端：uvicorn main:app --reload
-3. 启动前端：streamlit run app_qa.py
-           streamlit run app_file_uploader.py
+3. 启动前端：streamlit run app_qa.py ![问题回答页面](./chat-answer-page.png)
+           streamlit run app_file_uploader.py ![文件上传页面](./upload-page.png)
 
 ## 技术栈
 - **后端**：FastAPI + LangChain + Chroma

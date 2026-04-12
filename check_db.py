@@ -1,4 +1,4 @@
-# check_db.py 独立查看向量库内容
+# 独立工具：无需启动后端，直接查看向量库内容
 import config_data as config
 from langchain_chroma import Chroma
 

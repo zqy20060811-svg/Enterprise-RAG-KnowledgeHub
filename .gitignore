@@ -1,11 +1,51 @@
+# ===================== Python =====================
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-.env
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+*.egg
+
+# ===================== 虚拟环境 =====================
 .venv/
 venv/
-dist/
-build/
-*.egg-info/
+env/
+ENV/
+
+# ===================== 环境变量与密钥 =====================
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# ===================== 运行时数据（可重建，禁止入库） =====================
+chroma_db/
+pgvector_data/
+chat_history/
+uploads/
+md5.text
+*.log
+logs/
+
+# ===================== 缓存 =====================
+.cache/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.huggingface/
+
+# ===================== IDE / 编辑器 =====================
+.vscode/
+.idea/
+*.swp
+*.swo
 .DS_Store
+Thumbs.db
+
+# ===================== 构建产物 =====================
+build/
+dist/
+site/
+.coverage
+htmlcov/

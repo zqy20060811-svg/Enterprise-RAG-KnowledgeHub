@@ -37,7 +37,7 @@ if uploaded_file:
 
 # -------------------- 2. 文档列表 --------------------
 st.divider()
-st.markdown("### � 已上传文档")
+st.markdown("### 📋 已上传文档")
 try:
     res = requests.get(f"{BACKEND_URL}/api/documents").json()
     docs = res.get("data", [])

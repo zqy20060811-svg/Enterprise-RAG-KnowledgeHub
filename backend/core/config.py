@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     retrieval_top_k: int = Field(default=20, description="混合检索候选数量")
     rerank_top_n: int = Field(default=3, description="Reranker 精排后返回数量")
     confidence_threshold: float = Field(
-        default=0.3, description="拒答阈值：最高分低于此值则拒答"
+        default=0.03, description="拒答阈值：最高分低于此值则拒答"
     )
 
     # ===================== 分块配置 =====================

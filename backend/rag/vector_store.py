@@ -18,8 +18,10 @@ class BaseVectorStore(ABC):
     """向量库统一接口"""
 
     @abstractmethod
-    def add_documents(self, chunks: List[str], metadatas: List[dict]) -> List[str]:
-        """批量写入向量，返回 id 列表"""
+    def add_documents(
+        self, chunks: List[str], metadatas: List[dict], ids: Optional[List[str]] = None
+    ) -> List[str]:
+        """批量写入向量，ids 为确定性 ID 时同 id 自动覆盖，返回 id 列表"""
         ...
 
     @abstractmethod
@@ -56,8 +58,8 @@ class ChromaVectorStore(BaseVectorStore):
             persist_directory=settings.chroma_persist_dir,
         )
 
-    def add_documents(self, chunks, metadatas):
-        return self.store.add_texts(texts=chunks, metadatas=metadatas)
+    def add_documents(self, chunks, metadatas, ids=None):
+        return self.store.add_texts(texts=chunks, metadatas=metadatas, ids=ids)
 
     def similarity_search_with_score(self, query, k, filter=None):
         return self.store.similarity_search_with_score(query, k=k, filter=filter)
@@ -94,8 +96,8 @@ class PGVectorStore(BaseVectorStore):
             connection_string=settings.pgvector_connection_string,
         )
 
-    def add_documents(self, chunks, metadatas):
-        return self.store.add_texts(texts=chunks, metadatas=metadatas)
+    def add_documents(self, chunks, metadatas, ids=None):
+        return self.store.add_texts(texts=chunks, metadatas=metadatas, ids=ids)
 
     def similarity_search_with_score(self, query, k, filter=None):
         return self.store.similarity_search_with_score(query, k=k, filter=filter)

@@ -32,45 +32,86 @@ class DocumentService:
             if md5:
                 self._md5_set.add(md5)
 
+                
+
+    @staticmethod
+    def _make_doc_id(source_key: str, chunk_index: int) -> str:
+        """确定性 ID：同来源同序号的分块覆盖写入（upsert 语义）"""
+        return hashlib.sha256(f"{source_key}::{chunk_index}".encode("utf-8")).hexdigest()
+
+    def batch_ingest(self, items: List[dict]) -> dict:
+        """
+        批量入库：循环内不重建 BM25，结束后统一重建一次
+        items: [{content, source, source_type, source_url, license, crawl_time}, ...]
+        返回: {"added": 新增文档数, "skipped": 跳过数, "chunk_count": 入库分块总数}
+        """
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        all_chunks: List[str] = []
+        all_metas: List[dict] = []
+        all_ids: List[str] = []
+        stats = {"added": 0, "skipped": 0, "chunk_count": 0}
+
+        for item in items:
+            cleaned = clean_text(item.get("content", ""))
+            if not cleaned:
+                stats["skipped"] += 1
+                continue
+
+            content_md5 = get_content_md5(cleaned)
+            if content_md5 in self._md5_set:
+                stats["skipped"] += 1
+                continue
+
+            chunks = split_text(cleaned)
+            source = item.get("source", "unknown")
+            source_key = item.get("source_url") or source
+            for i, chunk in enumerate(chunks):
+                all_chunks.append(chunk)
+                all_metas.append(
+                    {
+                        "source": source,
+                        "source_type": item.get("source_type", "upload"),
+                        "source_url": item.get("source_url", ""),
+                        "license": item.get("license", ""),
+                        "crawl_time": item.get("crawl_time", ""),
+                        "chunk_index": i,
+                        "content_md5": content_md5,
+                        "create_time": now,
+                    }
+                )
+                all_ids.append(self._make_doc_id(source_key, i))
+            self._md5_set.add(content_md5)
+            stats["added"] += 1
+            stats["chunk_count"] += len(chunks)
+
+        if all_chunks:
+            self.vector_store.add_documents(all_chunks, all_metas, all_ids)
+            self.retriever._rebuild_bm25_index()
+
+        return stats
+
     def upload(self, file_bytes: bytes, filename: str) -> Tuple[str, int]:
         """
-        完整上传流程
+        完整上传流程（单文件入口，复用 batch_ingest）
         返回: (状态消息, 分块数量)
         """
-        # 1. 解析文档
         content = parse_document(file_bytes, filename)
         cleaned = clean_text(content)
         if not cleaned:
             return "文档内容为空", 0
 
-        # 2. MD5 去重
-        content_md5 = get_content_md5(cleaned)
-        if content_md5 in self._md5_set:
+        stats = self.batch_ingest(
+            [
+                {
+                    "content": content,
+                    "source": os.path.splitext(filename)[0],
+                    "source_type": "upload",
+                }
+            ]
+        )
+        if stats["added"] == 0:
             return "[跳过] 内容已存在", 0
-
-        # 3. 分块
-        chunks = split_text(cleaned)
-
-        # 4. 构造元数据（文件名、页码、chunk_index、md5）
-        base_name = os.path.splitext(filename)[0]
-        metadatas = [
-            {
-                "source": base_name,
-                "chunk_index": i,
-                "content_md5": content_md5,
-                "create_time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-            }
-            for i in range(len(chunks))
-        ]
-
-        # 5. 写入向量库
-        self.vector_store.add_documents(chunks, metadatas)
-        self._md5_set.add(content_md5)
-
-        # 6. 重建 BM25 索引
-        self.retriever._rebuild_bm25_index()
-
-        return "[成功] 已存入向量库", len(chunks)
+        return "[成功] 已存入向量库", stats["chunk_count"]
 
     def delete_by_source(self, filename: str) -> str:
         """按文件名删除"""
